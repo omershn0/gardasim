@@ -1,0 +1,805 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ASLAN GARDAŞIM</title>
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;500;700&family=Orbitron:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/TextPlugin.min.js"></script>
+
+    <style>
+      /* --- CORE SYSTEM STYLES --- */
+      :root {
+        --primary: #00f3ff; /* Neon Mavi */
+        --accent: #ff0055; /* Neon Kırmızı */
+        --bg: #050505; /* Derin Siyah */
+        --glass: rgba(255, 255, 255, 0.05);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        cursor: none;
+      }
+
+      body {
+        background-color: var(--bg);
+        color: #fff;
+        font-family: "Rajdhani", sans-serif;
+        overflow: hidden;
+        height: 100vh;
+        width: 100vw;
+      }
+
+      /* ÖZEL CURSOR */
+      #cursor {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 20px;
+        height: 20px;
+        border: 2px solid var(--primary);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        z-index: 10000;
+        transition:
+          width 0.3s,
+          height 0.3s;
+        mix-blend-mode: difference;
+      }
+      #cursor-dot {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 4px;
+        background: var(--primary);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        z-index: 10001;
+      }
+
+      /* SCANLINE & NOISE */
+      .scanlines {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          to bottom,
+          rgba(255, 255, 255, 0),
+          rgba(255, 255, 255, 0) 50%,
+          rgba(0, 0, 0, 0.1) 50%,
+          rgba(0, 0, 0, 0.1)
+        );
+        background-size: 100% 4px;
+        z-index: 9000;
+        pointer-events: none;
+        opacity: 0.4;
+      }
+      .vignette {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle, transparent 60%, black 140%);
+        z-index: 8999;
+        pointer-events: none;
+      }
+
+      /* --- LOADING SCREEN --- */
+      #boot-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+      .boot-text {
+        font-family: "Orbitron", sans-serif;
+        color: var(--primary);
+        font-size: 1.5rem;
+        letter-spacing: 5px;
+        margin-bottom: 20px;
+        text-transform: uppercase;
+      }
+      .loader-bar {
+        width: 300px;
+        height: 2px;
+        background: #333;
+        position: relative;
+        overflow: hidden;
+      }
+      .loader-progress {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 0%;
+        background: var(--primary);
+        box-shadow: 0 0 10px var(--primary);
+      }
+      #start-btn {
+        margin-top: 30px;
+        padding: 15px 40px;
+        border: 1px solid var(--primary);
+        background: transparent;
+        color: var(--primary);
+        font-family: "Rajdhani", sans-serif;
+        font-size: 1.2rem;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        cursor: pointer;
+        opacity: 0;
+        transition: all 0.3s;
+      }
+      #start-btn:hover {
+        background: var(--primary);
+        color: #000;
+        box-shadow: 0 0 20px var(--primary);
+      }
+
+      /* --- MAIN INTERFACE --- */
+      #interface {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+      }
+      .slide-stage {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+        perspective: 1000px;
+      }
+      .bg-layer {
+        position: absolute;
+        width: 110%;
+        height: 110%;
+        background-size: cover;
+        background-position: center;
+        filter: blur(30px) brightness(0.3);
+        opacity: 0.6;
+        transition: transform 0.1s;
+      }
+
+      /* MEDIA WRAPPER */
+      .main-media-wrapper {
+        position: relative;
+        z-index: 10;
+        width: auto;
+        max-width: 90%;
+        height: auto;
+        max-height: 85vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transform-style: preserve-3d;
+        box-shadow: 0 0 80px rgba(0, 0, 0, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: #000;
+        overflow: hidden;
+      }
+      .main-media {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        max-height: 85vh;
+      }
+
+      /* --- YAZI ALANI (OVERLAY) --- */
+      .media-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        /* Daha yumuşak, sinematik gölge */
+        background: linear-gradient(
+          to top,
+          rgba(0, 0, 0, 0.95) 0%,
+          rgba(0, 0, 0, 0.5) 70%,
+          transparent 100%
+        );
+        padding: 80px 40px 40px 40px;
+        z-index: 20;
+        pointer-events: none;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        align-items: flex-start;
+      }
+
+      .slide-counter {
+        font-family: "Orbitron";
+        color: var(--primary);
+        font-size: 0.9rem;
+        margin-bottom: 8px;
+        letter-spacing: 2px;
+        opacity: 0.8;
+      }
+      .slide-title {
+        font-family: "Orbitron";
+        font-size: 3rem;
+        text-transform: uppercase;
+        line-height: 1;
+        margin-bottom: 12px;
+        color: #fff;
+        text-shadow: 0 5px 15px rgba(0, 0, 0, 0.8);
+      }
+      .slide-desc {
+        font-size: 1.2rem;
+        color: #ddd;
+        border-left: 3px solid var(--accent);
+        padding-left: 15px;
+        text-shadow: 0 2px 5px rgba(0, 0, 0, 1);
+        max-width: 70%;
+        line-height: 1.5;
+      }
+
+      /* PROGRESS BAR */
+      .timeline {
+        position: absolute;
+        top: 40px;
+        right: 50px;
+        width: 200px;
+        height: 2px;
+        background: rgba(255, 255, 255, 0.1);
+        z-index: 50;
+        display: flex;
+        align-items: center;
+      }
+      .timeline-bar {
+        height: 100%;
+        background: var(--primary);
+        width: 0%;
+      }
+      .timeline-text {
+        position: absolute;
+        right: 0;
+        top: -20px;
+        font-size: 0.7rem;
+        color: var(--primary);
+      }
+
+      /* CREDITS SCREEN & MOZAİK */
+      #credits {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+        z-index: 9998;
+        display: none;
+        overflow: hidden;
+        text-align: center;
+      }
+      #credits-bg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+        display: flex;
+        flex-wrap: wrap;
+        opacity: 0;
+        filter: blur(5px) brightness(0.4);
+        pointer-events: none;
+      }
+      .c-media-item {
+        flex: 1 1 20%;
+        height: 33vh;
+        object-fit: cover;
+        border: 1px solid #000;
+      }
+
+      .credits-content {
+        position: absolute;
+        bottom: -100%;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        z-index: 10;
+      }
+      .cr-role {
+        color: var(--primary);
+        font-size: 0.9rem;
+        margin-top: 40px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+      }
+      .cr-name {
+        color: #fff;
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-top: 5px;
+        font-family: "Orbitron";
+        text-shadow: 0 0 10px black;
+      }
+      .cr-final {
+        font-size: 4rem;
+        color: #fff;
+        margin-top: 100px;
+        margin-bottom: 300px;
+        text-shadow: 0 0 20px var(--primary);
+      }
+
+      .sound-toggle {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        z-index: 10002;
+        width: 40px;
+        height: 40px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 12px;
+        color: var(--primary);
+        transition: all 0.3s;
+      }
+      .sound-toggle:hover {
+        background: var(--primary);
+        color: black;
+      }
+
+      @media (max-width: 768px) {
+        .main-media-wrapper {
+          width: 100%;
+          max-width: 100%;
+          max-height: 60vh;
+          border: none;
+        }
+        .slide-title {
+          font-size: 1.8rem;
+        }
+        .slide-desc {
+          font-size: 0.9rem;
+          max-width: 95%;
+        }
+        .c-media-item {
+          flex: 1 1 50%;
+          height: 20vh;
+        }
+        .media-overlay {
+          padding: 40px 20px 20px 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="cursor"></div>
+    <div id="cursor-dot"></div>
+
+    <div class="scanlines"></div>
+    <div class="vignette"></div>
+
+    <audio id="bg-music" loop>
+      <source src="" type="audio/mpeg" />
+    </audio>
+    <div class="sound-toggle" onclick="toggleSound()">
+      <i class="fas fa-volume-up">SFX</i>
+    </div>
+
+    <div id="boot-screen">
+      <div class="boot-text" id="boot-msg">FİLM YÜKLENİYOR</div>
+      <div class="loader-bar"><div class="loader-progress"></div></div>
+      <button id="start-btn" onclick="startSystem()">BAŞLAT</button>
+    </div>
+
+    <div id="interface">
+      <div class="timeline">
+        <div class="timeline-text"></div>
+        <div class="timeline-bar" id="progress-line"></div>
+      </div>
+
+      <div class="slide-stage" id="slide-stage">
+        <div class="bg-layer" id="bg-layer"></div>
+
+        <div class="main-media-wrapper" id="media-wrapper">
+          <div class="media-overlay">
+            <div class="slide-counter"></div>
+            <div class="slide-title" id="main-title"></div>
+            <div class="slide-desc" id="main-desc"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="credits">
+      <div id="credits-bg"></div>
+      <div class="credits-content" id="credits-scroll"></div>
+    </div>
+
+    <script>
+      // =================================================================
+      // AYARLAR PANELİ
+      // =================================================================
+      const CONFIG = {
+        musicURL: "./dosyalar/music.mp3",
+        slideDuration: 5000,
+        slides: [
+          {
+            type: "image",
+            src: "./dosyalar/image1.jpeg",
+            title: "",
+            desc: "Çooook Küçükken. O zamanlar mutluyduk tabi...",
+          },
+          {
+            type: "image",
+            src: "./dosyalar/image2.jpeg",
+            title: "",
+            desc: "Yeni tarzlar arıyorduk...",
+          },
+          {
+            type: "image",
+            src: "./dosyalar/image3.jpeg",
+            title: "",
+            desc: "Geçmişte bugün MAKBULE başkan ile",
+          },
+          {
+            type: "image",
+            src: "./dosyalar/image4.jpeg",
+            title: "",
+            desc: "Ufak bir hastane işi",
+          },
+          {
+            type: "video",
+            src: "./dosyalar/video1.mp4",
+            title: "DATE!!??",
+            desc: "Bir hastane işi daha",
+          },
+          {
+            type: "video",
+            src: "./dosyalar/video2.mp4",
+            title: "",
+            desc: "Birazda Eğlence:)",
+          },
+          {
+            type: "image",
+            src: "./dosyalar/image5.png",
+            title: "",
+            desc: "Bu güzellikte kim?",
+          },
+          {
+            type: "video",
+            src: "./dosyalar/video3.mp4",
+            title: "",
+            desc: "Bir tane Daha(Daha çoook var!)",
+          },
+          {
+            type: "image",
+            src: "./dosyalar/image6.jpeg",
+            title: "",
+            desc: "5 Günlük Krallık",
+          },
+          {
+            type: "image",
+            src: "./dosyalar/image7.jpeg",
+            title: "KAMU SPOTU",
+            desc: "",
+          },
+          {
+            type: "video",
+            src: "./dosyalar/video4.mp4",
+            title: "",
+            desc: "Güneşli günde herkesle buluşursun. Önemli olan karlı günde kiminle buluştuğundur.",
+          },
+          {
+            type: "image",
+            src: "./dosyalar/image8.png",
+            title: "",
+            desc: "Muhtemel Son",
+          },
+          {
+            type: "video",
+            src: "./dosyalar/video5.mp4",
+            title: "",
+            desc: "Bazı şeylerin açıklaması yoktur.",
+          },
+          {
+            type: "video",
+            src: "./dosyalar/video6.mp4",
+            title: "",
+            desc: "",
+          },
+
+          {
+            type: "video",
+            src: "./dosyalar/video7.mp4",
+            title: "",
+            desc: "",
+          },
+          {
+            type: "image",
+            src: "./dosyalar/image9.jpeg",
+            title: "",
+            desc: "",
+          },
+          {
+            type: "image",
+            src: "./dosyalar/image10.jpeg",
+            title: "",
+            desc: "",
+          },
+          {
+            type: "video",
+            src: "./dosyalar/video8.mp4",
+            title: "",
+            desc: "",
+          },
+        ],
+
+        credits: [
+          { role: "", name: "" },
+          { role: "BAŞROL", name: "MECİT ŞAHAN" },
+
+          { role: "MESAJ", name: "YENİ YAŞINDA HER ŞEY GÖNLÜNCE OLSUN" },
+        ],
+      };
+
+      // =================================================================
+      // SİSTEM MOTORU
+      // =================================================================
+
+      const els = {
+        bootScreen: document.getElementById("boot-screen"),
+        bootMsg: document.getElementById("boot-msg"),
+        loader: document.querySelector(".loader-progress"),
+        startBtn: document.getElementById("start-btn"),
+        interface: document.getElementById("interface"),
+        mediaWrapper: document.getElementById("media-wrapper"),
+        bgLayer: document.getElementById("bg-layer"),
+        title: document.getElementById("main-title"),
+        desc: document.getElementById("main-desc"),
+        progress: document.getElementById("progress-line"),
+        counter: document.querySelector(".slide-counter"),
+        audio: document.getElementById("bg-music"),
+        credits: document.getElementById("credits"),
+        creditsScroll: document.getElementById("credits-scroll"),
+        creditsBg: document.getElementById("credits-bg"),
+        cursor: document.getElementById("cursor"),
+        cursorDot: document.getElementById("cursor-dot"),
+      };
+
+      let currentSlide = 0;
+      let isAnimating = false;
+
+      // --- MOUSE HAREKETİ ---
+      window.addEventListener("mousemove", (e) => {
+        gsap.to(els.cursor, { x: e.clientX, y: e.clientY, duration: 0.1 });
+        gsap.to(els.cursorDot, { x: e.clientX, y: e.clientY, duration: 0 });
+
+        const x = (window.innerWidth / 2 - e.clientX) / 40; // Hassasiyet azaltıldı
+        const y = (window.innerHeight / 2 - e.clientY) / 40;
+
+        gsap.to(els.mediaWrapper, {
+          rotationY: x,
+          rotationX: -y,
+          duration: 1.5,
+          ease: "power2.out",
+        });
+        gsap.to(els.bgLayer, {
+          x: x * 1.5,
+          y: y * 1.5,
+          duration: 1.5,
+          ease: "power2.out",
+        });
+      });
+
+      // --- 1. BOOT SEQUENCE ---
+      window.onload = () => {
+        els.audio.querySelector("source").src = CONFIG.musicURL;
+        els.audio.load();
+
+        const msgs = [".", "..", "...", "....", "....."];
+        let i = 0;
+
+        const msgInterval = setInterval(() => {
+          els.bootMsg.innerText = msgs[i];
+          gsap.to(els.bootMsg, { text: msgs[i], duration: 0.5 });
+          i++;
+          if (i >= msgs.length) clearInterval(msgInterval);
+        }, 800);
+
+        gsap.to(els.loader, {
+          width: "100%",
+          duration: 3.5,
+          ease: "power2.inOut",
+          onComplete: () => {
+            gsap.to(els.startBtn, { opacity: 1, y: -10, duration: 0.5 });
+          },
+        });
+      };
+
+      function startSystem() {
+        els.audio.play().catch((e) => console.log("Audio play blocked"));
+
+        gsap.to(els.bootScreen, {
+          height: 0,
+          duration: 1.5,
+          ease: "expo.inOut",
+          onComplete: () => {
+            els.bootScreen.style.display = "none";
+          },
+        });
+
+        gsap.to(els.interface, { opacity: 1, duration: 1.5, delay: 0.5 });
+        playSlide(0);
+      }
+
+      // --- 2. SLAYT MEKANİĞİ (GÜNCELLENEN YUMUŞAK GEÇİŞ) ---
+      function playSlide(index) {
+        if (index >= CONFIG.slides.length) {
+          endSequence();
+          return;
+        }
+
+        const slide = CONFIG.slides[index];
+        isAnimating = true;
+
+        // Medya Hazırlığı
+        let mediaHTML = "";
+        if (slide.type === "video") {
+          mediaHTML = `<video class="main-media" src="${slide.src}" muted loop playsinline autoplay></video>`;
+          els.bgLayer.innerHTML = `<video style="width:100%; height:100%; object-fit:cover;" src="${slide.src}" muted loop playsinline autoplay></video>`;
+        } else {
+          mediaHTML = `<img class="main-media" src="${slide.src}">`;
+          els.bgLayer.innerHTML = "";
+          els.bgLayer.style.backgroundImage = `url('${slide.src}')`;
+        }
+
+        // Önceki medyayı temizle
+        const existingMedia = els.mediaWrapper.querySelector(".main-media");
+        if (existingMedia) existingMedia.remove();
+        els.mediaWrapper.insertAdjacentHTML("afterbegin", mediaHTML);
+
+        // --- YUMUŞAK GEÇİŞ MANTIĞI ---
+        const timeline = gsap.timeline();
+
+        // 1. Yazıları hemen sil (Fade out)
+        timeline.to([els.title, els.desc, els.counter], {
+          opacity: 0,
+          duration: 0.5,
+        });
+
+        // 2. Medya Başlangıç Ayarları (Görünmez başla)
+        gsap.set(els.mediaWrapper, {
+          opacity: 0,
+          scale: 1.05,
+          filter: "blur(10px)",
+        });
+
+        // 3. Medya Girişi (Yavaşça belir ve netleş)
+        timeline.to(
+          els.mediaWrapper,
+          {
+            opacity: 1,
+            scale: 1,
+            filter: "blur(0px)",
+            duration: 1.5,
+            ease: "power2.out",
+          },
+          "-=0.2",
+        ); // Yazılar silinirken resim gelmeye başlasın
+
+        // 4. Yeni Yazıları Yaz
+        timeline.call(() => {
+          els.counter.innerText = `FILE 0${index + 1} / 0${CONFIG.slides.length}`;
+          els.title.innerText = "";
+          els.desc.innerText = "";
+          gsap.set([els.title, els.desc, els.counter], { opacity: 1 }); // Görünür yap
+        });
+
+        timeline.to(els.title, {
+          text: slide.title,
+          duration: 1,
+          ease: "none",
+        });
+        timeline.to(
+          els.desc,
+          { text: slide.desc, duration: 2, ease: "none" },
+          "-=0.5",
+        );
+
+        // Progress Bar
+        gsap.fromTo(
+          els.progress,
+          { width: "0%" },
+          {
+            width: "100%",
+            duration: CONFIG.slideDuration / 1000,
+            ease: "linear",
+          },
+        );
+
+        // Döngü
+        setTimeout(() => {
+          // Çıkış Animasyonu (Hafifçe karararak git)
+          gsap.to(els.mediaWrapper, {
+            opacity: 0,
+            scale: 0.98,
+            filter: "blur(5px)",
+            duration: 1,
+            ease: "power2.in",
+          });
+
+          setTimeout(() => {
+            playSlide(index + 1);
+          }, 1000); // Animasyon süresi kadar bekle
+        }, CONFIG.slideDuration);
+      }
+
+      // --- 3. KAPANIŞ JENERİĞİ ---
+      function endSequence() {
+        gsap.to(els.interface, { opacity: 0, duration: 1.5 });
+        els.credits.style.display = "block";
+
+        let mosaicHTML = "";
+        const fullList = [...CONFIG.slides, ...CONFIG.slides];
+
+        fullList.forEach((slide) => {
+          if (slide.type === "video") {
+            mosaicHTML += `<video class="c-media-item" src="${slide.src}" muted loop autoplay></video>`;
+          } else {
+            mosaicHTML += `<img class="c-media-item" src="${slide.src}">`;
+          }
+        });
+
+        els.creditsBg.innerHTML = mosaicHTML;
+        gsap.to(els.creditsBg, { opacity: 1, duration: 3 });
+
+        els.creditsScroll.innerHTML = `<div class="cr-final">DOĞUM GÜNÜ KUTLU OLSUN KARDEŞİM</div>`;
+        CONFIG.credits.forEach((cr) => {
+          els.creditsScroll.innerHTML += `
+            <div class="cr-role">${cr.role}</div>
+            <div class="cr-name">${cr.name}</div>
+          `;
+        });
+        els.creditsScroll.innerHTML += `<div class="cr-final" style="margin-top:200px">İYİ Kİ DOĞDUN</div>`;
+
+        const h = els.creditsScroll.scrollHeight;
+        gsap.fromTo(
+          els.creditsScroll,
+          { y: window.innerHeight },
+          { y: -h, duration: 20, ease: "linear" },
+        );
+      }
+
+      function toggleSound() {
+        if (els.audio.paused) els.audio.play();
+        else els.audio.pause();
+      }
+    </script>
+  </body>
+</html>
